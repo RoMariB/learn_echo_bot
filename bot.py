@@ -1,8 +1,8 @@
-import logging
-import ephem
-
 import datetime
-from wsgiref.handlers import format_date_time
+import ephem
+from glob import glob
+import logging
+from random import randint, choice
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 import mysettings
@@ -11,7 +11,6 @@ logging.basicConfig(filename='bot.log', level=logging.INFO, format="%(levelname)
 
 def greet_user(update, context):
     print("Вызван /start")
-    #print(update)
     update.message.reply_text("Привет, пользователь! Как джина из лампы, ты вызвал команду /start")
 
 def planet_constel(update, context):
@@ -40,6 +39,47 @@ def planet_constel(update, context):
     print(const)
     update.message.reply_text(f'Эта планета сегодня находится в созвездиии {const}')
 
+def count_words(update, context):
+    len_message = len(context.args)
+    if len_message == 1:
+        answer = f"{len_message} слово."
+    elif len_message > 1:
+        answer = f"{len_message} слов."
+    else:
+        answer = "Вы ничего не ввели."
+    update.message.reply_text(answer)
+
+def next_full_moon(update, context):
+    today = str(datetime.date.today()).replace("-", "/")
+    date_moon = ephem.next_full_moon(today).datetime()
+    update.message.reply_text(f"Ближайшее полнолуние будет {date_moon.strftime('%d.%m.%Y %H:%M:%S')}")
+
+def play_random_numbers(user_number):
+    bot_number = randint(user_number-10, user_number+10)
+    if bot_number > user_number:
+        message = f"Вы загадали: {user_number}, Я загадал: {bot_number}. Я победил."
+    elif bot_number == user_number:
+        message = f"Вы загадали: {user_number}, Я загадал: {bot_number}. Ничья."
+    elif bot_number < user_number:
+        message = f"Вы загадали: {user_number}, Я загадал: {bot_number}. Вы победили."
+    return message
+
+def guess_number(update, context):
+    if context.args:
+        try:
+            user_number = int(context.args[0])
+            message = play_random_numbers(user_number)
+        except (TypeError, ValueError):
+            message = "Введите целое число"
+    else:
+        message = "Введите число"
+    update.message.reply_text(message)
+
+def send_cat_picture(update, context):
+    cat_photo_list = glob("images/cat*.jp*g")
+    cat_photo_filename = choice(cat_photo_list)
+    chat_id = update.effective_chat.id
+    context.bot.send_photo(chat_id=chat_id, photo=open(cat_photo_filename, 'rb'))
 
 def talk_to_me(update, context):
     text = update.message.text
@@ -52,6 +92,10 @@ def main():
     dp = mybot.dispatcher
     dp.add_handler(CommandHandler("start", greet_user))
     dp.add_handler(CommandHandler("planet", planet_constel))
+    dp.add_handler(CommandHandler("wordcount", count_words))
+    dp.add_handler(CommandHandler("next_full_moon", next_full_moon))
+    dp.add_handler(CommandHandler("guess", guess_number))
+    dp.add_handler(CommandHandler("cat", send_cat_picture))
     dp.add_handler(MessageHandler(Filters.text, talk_to_me))
 
     logging.info("Бот стартовал")
