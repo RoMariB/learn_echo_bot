@@ -1,4 +1,5 @@
 import datetime
+from emoji import emojize
 import ephem
 from glob import glob
 import logging
@@ -9,9 +10,16 @@ import mysettings
 
 logging.basicConfig(filename='bot.log', level=logging.INFO, format="%(levelname)s:%(asctime)s - %(message)s")
 
+def get_smile(user_data):
+    if "emoji" not in user_data:
+        smile = choice(mysettings.USER_EMOJI)
+        return emojize(smile, language="alias")
+    return user_data["emoji"]
+
 def greet_user(update, context):
     print("Вызван /start")
-    update.message.reply_text("Привет, пользователь! Как джина из лампы, ты вызвал команду /start")
+    context.user_data["emoji"] = get_smile(context.user_data)
+    update.message.reply_text(f"Привет, пользователь!{context.user_data['emoji']} Как джина из лампы, ты вызвал команду /start")
 
 def planet_constel(update, context):
     text_list = update.message.text.split()
@@ -82,9 +90,10 @@ def send_cat_picture(update, context):
     context.bot.send_photo(chat_id=chat_id, photo=open(cat_photo_filename, 'rb'))
 
 def talk_to_me(update, context):
+    context.user_data["emoji"] = get_smile(context.user_data)
     text = update.message.text
     print(text)
-    update.message.reply_text(text)
+    update.message.reply_text(f"{text} {context.user_data['emoji']}")
 
 def main():
     mybot = Updater(mysettings.API_KEY, use_context=True)
